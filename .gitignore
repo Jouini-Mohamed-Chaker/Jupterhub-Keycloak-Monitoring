@@ -7,3 +7,4 @@ keycloak-stack/charts/*.tgz
 
 # misc
 .DS_Store
+charts
