@@ -1,0 +1,103 @@
+global:
+  postgresql:
+    database: keycloak
+    username: keycloak
+
+# ---------------------------------------------------------------------------
+# Postgres (plain, self-hosted, no third-party vendor chart)
+# ---------------------------------------------------------------------------
+postgresql:
+  enabled: true
+  image: "postgres:16-alpine"
+  database: keycloak
+  username: keycloak
+  # If password is left empty, a random one is generated once and stored
+  # in the Secret (kept stable across upgrades since Secrets aren't
+  # recreated by `helm upgrade` unless you delete them).
+  password: ""
+  persistence:
+    size: 8Gi
+    storageClassName: ""     # "" = use cluster default StorageClass
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# Keycloak (codecentric/keycloakx subchart) — values under `keycloak:` are
+# passed straight through to that subchart because of the alias above.
+# ---------------------------------------------------------------------------
+keycloak:
+  replicas: 1
+
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "26.6.2"
+
+  command:
+    - "/opt/keycloak/bin/kc.sh"
+    - "start"
+    - "--http-enabled=true"
+    - "--http-port=8080"
+    - "--hostname-strict=false"
+    - "--db=postgres"
+    - "--health-enabled=true"
+    - "--metrics-enabled=true"
+
+  extraEnv: |
+    - name: KEYCLOAK_ADMIN
+      value: "admin"
+    - name: KEYCLOAK_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "keycloak-stack.postgresql.secretName" . }}
+          key: keycloak-admin-password
+    - name: KC_DB
+      value: "postgres"
+    - name: KC_DB_URL_HOST
+      value: {{ include "keycloak-stack.postgresql.serviceName" . }}
+    - name: KC_DB_URL_PORT
+      value: "5432"
+    - name: KC_DB_URL_DATABASE
+      value: {{ .Values.global.postgresql.database }}
+    - name: KC_DB_USERNAME
+      value: {{ .Values.global.postgresql.username }}
+    - name: KC_DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "keycloak-stack.postgresql.secretName" . }}
+          key: password
+
+  ingress:
+    enabled: false
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 768Mi
+    limits:
+      memory: 1536Mi
+
+  startupProbe: |
+    httpGet:
+      path: /auth/health/started
+      port: 9000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 30
+
+  livenessProbe: |
+    httpGet:
+      path: /auth/health/live
+      port: 9000
+    initialDelaySeconds: 0
+    periodSeconds: 10
+
+  readinessProbe: |
+    httpGet:
+      path: /auth/health/ready
+      port: 9000
+    initialDelaySeconds: 0
+    periodSeconds: 10

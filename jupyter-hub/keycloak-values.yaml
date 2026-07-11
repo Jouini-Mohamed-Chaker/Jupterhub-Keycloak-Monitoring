@@ -1,0 +1,9 @@
+keycloak:
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    rules:
+      - host: keycloak.local
+        paths:
+          - path: /
+            pathType: Prefix

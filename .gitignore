@@ -1,0 +1,9 @@
+# secrets
+jupyter-hub/passwords.txt
+*.txt
+
+# helm chart deps (regenerable via `helm dependency build`)
+keycloak-stack/charts/*.tgz
+
+# misc
+.DS_Store

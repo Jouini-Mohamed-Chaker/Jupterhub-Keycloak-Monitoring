@@ -1,0 +1,18 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "keycloak-stack.postgresql.serviceName" . }}
+  labels:
+    app.kubernetes.io/name: keycloak-stack-postgresql
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  clusterIP: None   # headless — stable DNS name for the StatefulSet pod
+  selector:
+    app.kubernetes.io/name: keycloak-stack-postgresql
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: postgresql
+{{- end }}
